@@ -1,5 +1,6 @@
 """ Author: Lex Bosch
     Date: 14-10-2019
+    Version: 1.1
     Function: Script that gahters the information about all the groups that participate in the jotihunt
             go to https://www.google.com/maps/d/u/0/?hl=en to create a map for the csv file
 """
@@ -34,7 +35,7 @@ class Groups:
 
         :return: group district
         """
-        return self.area
+        return self.area.lower()
 
 
 def main():
@@ -90,23 +91,16 @@ def choose_district(group_list):
     :param group_list: List containing group objects
     :return: returns a possibly updated list of group objects
     """
-    possible_districts = []
-    for group in group_list:
-        if group.get_district() not in possible_districts:
-            possible_districts.append(group.get_district().lower())
+    possible_districts = {group.get_district for group in group_list}
     if len(possible_districts) <= 1:
         return group_list
     else:
         print("Mulitple districts have been found. Please enter the name of the disctrict you would like"
               "to process, leave blank to parse every district. possible districts are;")
         chosen_district = input_district(possible_districts)
-        new_group_list = []
-        if chosen_district == "":
-            return group_list
-        for group in group_list:
-            if group.get_district() == chosen_district:
-                new_group_list.append(group)
-        return new_group_list
+        if chosen_district != "":
+            group_list = [group for group in group_list if group.get_district() == chosen_district]
+        return group_list
 
 
 def input_district(possible_districts):

@@ -128,7 +128,7 @@ def create_csv(group_list):
     :param group_list: List containing group objects
     :return: returns string in csv format
     """
-#    group_list = choose_district(group_list)
+    group_list = choose_district(group_list)
     csv_file = "lon, lat, title\n"
     kml_file = create_kml_file()
     for group in group_list:
@@ -148,12 +148,12 @@ def choose_district(group_list):
     :param group_list: List containing group objects
     :return: returns a possibly updated list of group objects
     """
-    possible_districts = {group.get_district for group in group_list}
+    possible_districts = ([group.get_district() for group in group_list])
     if len(possible_districts) <= 1:
         return group_list
     else:
-        print("Mulitple districts have been found. Please enter the name of the disctrict you would like"
-              "to process, leave blank to parse every district. possible districts are;")
+        print("Mulitple districts have been found. Please enter the name of the disctrict you would like\n"
+              "to process, leave blank to parse every district. possible districts are;\n")
         chosen_district = input_district(possible_districts)
         if chosen_district != "":
             group_list = [group for group in group_list if group.get_district() == chosen_district]
@@ -167,8 +167,9 @@ def input_district(possible_districts):
     :return: returns the chosen district
     """
     print(", ".join(possible_districts))
-    chosen_district = input("please write the name of the district")
-    if chosen_district.lower() not in possible_districts and not "":
+    chosen_district = input("please write the name of the district\n")
+
+    if chosen_district.lower() not in possible_districts and chosen_district != "":
         print("\nDistrict not given correctly. Please try agian")
         input_district(possible_districts)
     else:

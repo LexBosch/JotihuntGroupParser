@@ -8,7 +8,6 @@
 import urllib.request
 import json
 import xml.etree.ElementTree as EleTree
-from time import sleep
 
 
 class CreateKmlFile:
@@ -33,7 +32,7 @@ class CreateKmlFile:
         
         :return: KML in string format
         """
-        return EleTree.tostring(self.full.decode("utf-8"))
+        return EleTree.tostring(self.full).decode("utf-8")
 
     def add_group(self, group_name, group_lon, group_lan, district):
         """ Adds a group to the markup. Gives it its style depending on the district given by the api
@@ -86,15 +85,11 @@ class Groups:
         self.longtitute = group_dictionary["long"]
         self.area = group_dictionary["deelgebied"]
 
-    def get_location_info(self):
-        """Gathers information regarding the creation of the kml file
-
-        :return: returns a kml string containing the lon, lan and name of a group
-        """
-        export_info = "{},{},{}".format(self.longtitute, self.latitute, self.group_name)
-        return export_info
-
     def get_better_location_info(self):
+        """ Returns some information about the object.
+
+        :return: Look at the variable names, it's not hard
+        """
         return self.group_name, self.longtitute, self.latitute, self.area
 
     def get_district(self):
@@ -117,17 +112,19 @@ def main():
         write_kml(kml_string)
         print("The process has compoleted succesfully.\nA file has been created in the same folder as this script")
         input("Press enter to leave to program")
-
-    except urllib.error.URLError:
+    except urllib.error.URLError:  # it's not a error, pycharm
         print("Make sure you have an stable internet connection")
         input("Press enter to leave to program")
+
 
 def gather_online_info():
     """Uses the Jotihunt api to gather information about the participating groups of the jotihunt
 
     :return: dictionary containing information of the groups
     """
+    print("Featching data.\n")
     contents = urllib.request.urlopen("https://jotihunt.net/api/1.0/deelnemers").read()
+    print("Data gathered.\n")
     return json.loads(contents)
 
 
@@ -137,10 +134,7 @@ def create_group_objects(input_dictionary):
     :param input_dictionary: dictionary gathered from the jotihunt api
     :return: returns list with group objects
     """
-    group_list = []
-    for group in input_dictionary["data"]:
-        if group["naam"] != "naam":
-            group_list.append(Groups(group))
+    group_list = [Groups(group) for group in input_dictionary["data"] if group["naam"] != "naam"]
     return group_list
 
 
@@ -153,10 +147,9 @@ def create_kml(group_list):
     group_list = choose_district(group_list)
     kml_file = CreateKmlFile()
     for group in group_list:
-        var1, var2, var3, var4 = group.get_better_location_info()
-        kml_file.add_group(var1, var2, var3, var4)
-        kml_file.add_style(var4)
-
+        group_name, lon, lan, district = group.get_better_location_info()
+        kml_file.add_group(group_name, lon, lan, district)
+        kml_file.add_style(district)
     return kml_file.get_xml()
 
 
@@ -167,7 +160,7 @@ def choose_district(group_list):
     :param group_list: List containing group objects
     :return: returns a possibly updated list of group objects
     """
-    possible_districts = ([group.get_district() for group in group_list])
+    possible_districts = set([group.get_district() for group in group_list])
     if len(possible_districts) <= 1:
         return group_list
     else:

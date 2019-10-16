@@ -1,59 +1,76 @@
 """ Author: Lex Bosch
     Date: 14-10-2019
-    Version: 1.1
-    Function: Script that gahters the information about all the groups that participate in the jotihunt
-            go to https://www.google.com/maps/d/u/0/?hl=en to create a map for the csv file
+    Version: 1.2
+    Function: Script that gathers the information about all the groups that participate in the jotihunt
+            go to https://www.google.com/maps/d/u/0/?hl=en to create a map for the kml file
 """
 
 import urllib.request
 import json
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as EleTree
+from time import sleep
 
 
-class create_kml_file:
+class CreateKmlFile:
+    """Builds an KML Object containing all information needed to create elements on the maps    
+    """
     def __init__(self):
+        """ Initiates object
+            colorlist contains a few colors that are pretty. Each style gets it's own pretty color
+        
+        """
         self.colorlist = ["501400FF", "5014F0FF", "5000FF14", "507800F0", "501478E6", "50FFFFFF", "50000000"]
         self.colorcounter = 0
         self.style_list = []
-        self.full = ET.Element('kml')
+        self.full = EleTree.Element('kml')
         self.full.set("xmlns", "http://www.opengis.net/kml/2.2")
-        self.docu = ET.SubElement(self.full, 'Document')
-        naam = ET.SubElement(self.docu, "name")
+        self.docu = EleTree.SubElement(self.full, 'Document')
+        naam = EleTree.SubElement(self.docu, "name")
         naam.text = "Jotihunt 2019 - Deelnemende Groepen"
 
     def get_xml(self):
-        return ET.tostring(self.full)
-
+        """Return String of the KML
+        
+        :return: KML in string format
+        """
+        return EleTree.tostring(self.full.decode("utf-8"))
 
     def add_group(self, group_name, group_lon, group_lan, district):
-        group_mark = ET.SubElement(self.docu, "Placemark")
-        group_name_el = ET.SubElement(group_mark, "name")
+        """ Adds a group to the markup. Gives it its style depending on the district given by the api
+        
+        :param group_name: Name of the group, used as the elements title
+        :param group_lon: used for gps calculation
+        :param group_lan: also used for gps calculation
+        :param district: District the group is in, used for its style
+        :return: returns NOTHING. Just adds a few sub elements
+        """
+        group_mark = EleTree.SubElement(self.docu, "Placemark")
+        group_name_el = EleTree.SubElement(group_mark, "name")
         group_name_el.text = group_name
-        group_style_el = ET.SubElement(group_mark, "styleUrl")
-        group_style_el.text = "#"+district.replace(".","") + "_style"
-        group_point_el = ET.SubElement(group_mark, "Point")
-        group_coord_el = ET.SubElement(group_point_el, "coordinates")
+        group_style_el = EleTree.SubElement(group_mark, "styleUrl")
+        group_style_el.text = "#" + district.replace(".", "") + "_style"
+        group_point_el = EleTree.SubElement(group_mark, "Point")
+        group_coord_el = EleTree.SubElement(group_point_el, "coordinates")
         group_coord_el.text = "{0},{1},0".format(group_lon, group_lan)
 
-
     def add_style(self, district):
-        if not district in self.style_list:
-            main_style = ET.SubElement(self.docu, "Style")
-            main_style.set("id",district.replace(".","")+"_style")
-            icon_style = ET.SubElement(main_style, "IconStyle")
-            ET.SubElement(icon_style, "color").text = self.colorlist[self.colorcounter]
+        """ Adds a style to the given district if the given district doesn't already have a have a style.
+            The district is assigned a color depending on the list at the __init__ and the counter. 
+        
+        :param district: District name of the group
+        :return: returns NOTTHING
+        """
+        if district not in self.style_list:
+            main_style = EleTree.SubElement(self.docu, "Style")
+            main_style.set("id", district.replace(".", "") + "_style")
+            icon_style = EleTree.SubElement(main_style, "IconStyle")
+            EleTree.SubElement(icon_style, "color").text = self.colorlist[self.colorcounter]
             self.colorcounter += 1
-            ET.SubElement(icon_style, "scale").text = "1"
-            subicon_style = ET.SubElement(icon_style, "Icon")
-            ET.SubElement(subicon_style, "href").text = "http://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png"
+            EleTree.SubElement(icon_style, "scale").text = "1"
+            subicon_style = EleTree.SubElement(icon_style, "Icon")
+            EleTree.SubElement(subicon_style, "href").text \
+                = "http://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png"
             self.style_list.append(district)
-
-
-
-
-
-
-
 
 
 class Groups:
@@ -70,16 +87,15 @@ class Groups:
         self.area = group_dictionary["deelgebied"]
 
     def get_location_info(self):
-        """Gathers information regarding the creation of the csv file
+        """Gathers information regarding the creation of the kml file
 
-        :return: returns a csv string containing the lon, lan and name of a group
+        :return: returns a kml string containing the lon, lan and name of a group
         """
         export_info = "{},{},{}".format(self.longtitute, self.latitute, self.group_name)
         return export_info
 
     def get_better_location_info(self):
         return self.group_name, self.longtitute, self.latitute, self.area
-
 
     def get_district(self):
         """Getting for group area
@@ -92,13 +108,19 @@ class Groups:
 def main():
     """Main for the application
 
-    :return: Creates csv
+    :return: Creates kml
     """
-    information_dictionary = gather_online_info()
-    group_list = create_group_objects(information_dictionary)
-    csv_string = create_csv(group_list)
-    write_csv(csv_string)
+    try:
+        information_dictionary = gather_online_info()
+        group_list = create_group_objects(information_dictionary)
+        kml_string = create_kml(group_list)
+        write_kml(kml_string)
+        print("The process has compoleted succesfully.\nA file has been created in the same folder as this script")
+        input("Press enter to leave to program")
 
+    except urllib.error.URLError:
+        print("Make sure you have an stable internet connection")
+        input("Press enter to leave to program")
 
 def gather_online_info():
     """Uses the Jotihunt api to gather information about the participating groups of the jotihunt
@@ -122,23 +144,20 @@ def create_group_objects(input_dictionary):
     return group_list
 
 
-def create_csv(group_list):
-    """Creates string in csv format. Checks for area to parse.
+def create_kml(group_list):
+    """Creates string in kml format. Checks for area to parse.
 
     :param group_list: List containing group objects
-    :return: returns string in csv format
+    :return: returns string in kml format
     """
     group_list = choose_district(group_list)
-    csv_file = "lon, lat, title\n"
-    kml_file = create_kml_file()
+    kml_file = CreateKmlFile()
     for group in group_list:
         var1, var2, var3, var4 = group.get_better_location_info()
         kml_file.add_group(var1, var2, var3, var4)
         kml_file.add_style(var4)
 
-
-
-    return kml_file.get_xml().decode("utf-8")
+    return kml_file.get_xml()
 
 
 def choose_district(group_list):
@@ -176,14 +195,14 @@ def input_district(possible_districts):
         return chosen_district
 
 
-def write_csv(csv_string):
-    """write csv file
+def write_kml(kml_string):
+    """Writes kml file
 
-    :param csv_string: string in csv format
-    :return: csv file
+    :param kml_string: string in kml format
+    :return: klm file
     """
     with open("jotihunt_location.kml", "w") as export_file:
-        export_file.write(csv_string)
+        export_file.write(kml_string)
 
 
 if __name__ == '__main__':
